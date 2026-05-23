@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empório Delícias da Canastra - Catálogo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .welcome-msg { background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .cart-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
+        .cart-item .qty-control { display: flex; align-items: center; gap: 5px; }
+        .cart-total { font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Welcome message placeholder -->
+        <div id="welcomeMessage" class="welcome-msg" style="display: none;"></div>
+
+        <div class="row">
+            <!-- Main content: product cards -->
+            <div class="col-md-8">
+                <h1 class="mb-4">Catálogo de Produtos</h1>
+                <div class="row" th:each="produto : ${produtos}">
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title" th:text="${produto.nome}">Nome do Produto</h5>
+                                <p class="card-text" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 2)}">Preço</p>
+                                <button class="btn btn-primary" th:data-id="${produto.id}" th:data-nome="${produto.nome}" th:data-preco="${produto.preco}" onclick="adicionarAoCarrinho(this)">Adicionar ao Carrinho</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar: shopping cart -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Carrinho de Compras</h5>
+                    </div>
+                    <div class="card-body" id="cartContent">
+                        <!-- Cart items will be rendered here -->
+                        <div id="cartItems"></div>
+                        <div class="cart-total">Total: <span id="cartTotal">R$ 0,00</span></div>
+                        <hr>
+                        <form id="orderForm">
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="nome" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pontoRetirada" class="form-label">Ponto de Retirada</label>
+                                <select class="form-select" id="pontoRetirada">
+                                    <option value="BB Sede I">BB Sede I</option>
+                                    <option value="BB Sede III">BB Sede III</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-success w-100" onclick="finalizarPedido()">Finalizar Pedido via WhatsApp</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Carrinho em memória
+        let carrinho = [];
+
+        // Estratégia 1: Lembre-se de Mim
+        function carregarDadosLembrados() {
+            const nome = localStorage.getItem('nome');
+            const telefone = localStorage.getItem('telefone');
+            const pontoRetirada = localStorage.getItem('pontoRetirada');
+            if (nome && telefone && pontoRetirada) {
+                document.getElementById('nome').value = nome;
+                document.getElementById('telefone').value = telefone;
+                document.getElementById('pontoRetirada').value = pontoRetirada;
+                const welcomeDiv = document.getElementById('welcomeMessage');
+                welcomeDiv.innerHTML = `Bem-vindo(a) de volta, ${nome}! Seus dados foram carregados.`;
+                welcomeDiv.style.display = 'block';
+            }
+        }
+
+        function salvarDadosLembrados() {
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const pontoRetirada = document.getElementById('pontoRetirada').value;
+            localStorage.setItem('nome', nome);
+            localStorage.setItem('telefone', telefone);
+            localStorage.setItem('pontoRetirada', pontoRetirada);
+        }
+
+        // Adicionar ao carrinho
+        function adicionarAoCarrinho(btn) {
+            const id = btn.getAttribute('data-id');
+            const nome = btn.getAttribute('data-nome');
+            const preco = parseFloat(btn.getAttribute('data-preco'));
+            const existing = carrinho.find(item => item.id === id);
+            if (existing) {
+                existing.quantidade++;
+            } else {
+                carrinho.push({ id, nome, preco, quantidade: 1 });
+            }
+            renderizarCarrinho();
+        }
+
+        // Renderizar carrinho
+        function renderizarCarrinho() {
+            const cartItemsDiv = document.getElementById('cartItems');
+            cartItemsDiv.innerHTML = '';
+            let total = 0;
+            carrinho.forEach((item, index) => {
+                total += item.preco * item.quantidade;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'cart-item';
+                itemDiv.innerHTML = `
+                    <div><strong>${item.nome}</strong></div>
+                    <div class="qty-control">
+                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, -1)">-</button>
+                        <span>${item.quantidade}</span>
+                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, 1)">+</button>
+                        <button class="btn btn-sm btn-danger ms-2" onclick="removerItem(${index})">Remover</button>
+                    </div>
+                    <div>R$ ${(item.preco * item.quantidade).toFixed(2)}</div>
+                `;
+                cartItemsDiv.appendChild(itemDiv);
+            });
+            document.getElementById('cartTotal').innerText = `R$ ${total.toFixed(2)}`;
+        }
+
+        function alterarQuantidade(index, delta) {
+            const item = carrinho[index];
+            if (item) {
+                item.quantidade += delta;
+                if (item.quantidade <= 0) {
+                    carrinho.splice(index, 1);
+                }
+                renderizarCarrinho();
+            }
+        }
+
+        function removerItem(index) {
+            carrinho.splice(index, 1);
+            renderizarCarrinho();
+        }
+
+        // Finalizar pedido via WhatsApp
+        function finalizarPedido() {
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const ponto = document.getElementById('pontoRetirada').value;
+            if (!nome || !telefone || carrinho.length === 0) {
+                alert('Preencha todos os campos e adicione itens ao carrinho.');
+                return;
+            }
+            // Salvar dados lembrados
+            salvarDadosLembrados();
+
+            let mensagem = `Olá! Gostaria de fazer um pedido no Empório Delícias da Canastra.%0A%0A`;
+            mensagem += `*Dados do Cliente*%0ANome: ${nome}%0ATelefone: ${telefone}%0APonto de Retirada: ${ponto}%0A%0A`;
+            mensagem += `*Itens do Pedido*%0A`;
+            carrinho.forEach(item => {
+                mensagem += `${item.nome} - Qtd: ${item.quantidade} - Subtotal: R$ ${(item.preco * item.quantidade).toFixed(2)}%0A`;
+            });
+            const total = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+            mensagem += `%0A*Total: R$ ${total.toFixed(2)}*%0A%0A`;
+            mensagem += `Agradeço a atenção e aguardo a confirmação do pedido.`;
+
+            const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
+            window.open(url, '_blank');
+        }
+
+        // Carregar dados ao iniciar
+        window.onload = carregarDadosLembrados;
+    </script>
+</body>
+</html>
