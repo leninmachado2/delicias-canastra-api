@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Empório Delícias da Canastra - Catálogo</title>
+    <title>Empório Canastra DF - Catálogo</title>
     <meta name="description" content="Produtos artesanais e delícias da Canastra. Faça seu pedido via WhatsApp.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/site.css" rel="stylesheet">
@@ -11,7 +11,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand" href="#">Empório Delícias da Canastra</a>
+            <a class="navbar-brand" href="#">Empório Canastra DF</a>
         </div>
     </nav>
 
@@ -78,12 +78,36 @@
                                 <input class="form-check-input" type="checkbox" id="lembrarDados">
                                 <label class="form-check-label" for="lembrarDados">Lembrar meus dados</label>
                             </div>
-                            <button type="button" class="btn btn-success w-100" onclick="finalizarPedido()">Finalizar Pedido</button>
+                            <button type="button" class="btn btn-success w-100" onclick="abrirConfirmacaoPedido()">Finalizar Pedido</button>
                         </form>
                         <div id="orderFeedback" class="alert alert-info visually-hidden mt-3" role="status"></div>
                     </div>
                 </div>
             </aside>
+        </div>
+
+        <div class="modal fade" id="confirmPaymentModal" tabindex="-1" aria-labelledby="confirmPaymentModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmPaymentModalLabel">Confirmação de pagamento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Ao confirmar, você será redirecionado para o checkout do PagBank.</p>
+                        <p>O pagamento poderá ser feito por PIX, cartão de crédito/débito ou outras formas 
+                            oferecidas pelo PagBank.</p>
+                        <p><strong>Total do pedido:</strong> <span id="confirmTotal">R$ 0,00</span></p>
+                        <p>Após concluir o pagamento, o PagBank retornará o status do pedido ao sistema e eu 
+                            te confirmo pagamento pelo WhatsApp.</p>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmarPedido()">Confirmar e continuar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -189,11 +213,10 @@
             renderizarCarrinho();
         }
 
-        // Finalizar pedido via WhatsApp
-        async function finalizarPedido() {
+        // Abrir modal de confirmação antes de enviar o pedido
+        function abrirConfirmacaoPedido() {
             const nome = document.getElementById('nome').value.trim();
             const telefone = document.getElementById('telefone').value.trim();
-            const ponto = document.getElementById('pontoRetirada').value;
             const feedback = document.getElementById('orderFeedback');
             feedback.classList.add('visually-hidden');
 
@@ -201,6 +224,30 @@
                 alert('Preencha todos os campos e adicione itens ao carrinho.');
                 return;
             }
+
+            const total = carrinho.reduce((sum, item) => sum + item.preco * item.quantidade, 0);
+            document.getElementById('confirmTotal').innerText = `R$ ${total.toFixed(2)}`;
+
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmPaymentModal'));
+            confirmModal.show();
+        }
+
+        async function confirmarPedido() {
+            const confirmModalEl = document.getElementById('confirmPaymentModal');
+            const confirmModal = bootstrap.Modal.getInstance(confirmModalEl);
+            if (confirmModal) {
+                confirmModal.hide();
+            }
+            await enviarPedido();
+        }
+
+        async function enviarPedido() {
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+            const ponto = document.getElementById('pontoRetirada').value;
+            const feedback = document.getElementById('orderFeedback');
+            feedback.classList.add('visually-hidden');
+
             salvarDadosLembrados();
 
             const payload = {
