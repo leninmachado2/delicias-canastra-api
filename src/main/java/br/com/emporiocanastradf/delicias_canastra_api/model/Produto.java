@@ -1,4 +1,4 @@
-package br.com.emporiodeliciasdacanastra.delicias_canastra_api.model;
+package br.com.emporiocanastradf.delicias_canastra_api.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -17,19 +17,21 @@ public class Produto {
     private Double preco;
     private String descricao;
     private Integer quantidadeEstoque;
+    private String caminhoImagem;
 
     // Construtor Padrão (Vazio)
     public Produto() {
     }
 
     // Construtor Completo
-    public Produto(Long id, String nome, String categoria, Double preco, String descricao, Integer quantidadeEstoque) {
+    public Produto(Long id, String nome, String categoria, Double preco, String descricao, Integer quantidadeEstoque, String caminhoImagem) {
         this.id = id;
         this.nome = nome;
         this.categoria = categoria;
         this.preco = preco;
         this.descricao = descricao;
         this.quantidadeEstoque = quantidadeEstoque;
+        this.caminhoImagem = caminhoImagem;
     }
 
     // --- GETTERS E SETTERS TRADICIONAIS ---
@@ -80,5 +82,13 @@ public class Produto {
 
     public void setQuantidadeEstoque(Integer quantidadeEstoque) {
         this.quantidadeEstoque = quantidadeEstoque;
+    }
+
+    public String getCaminhoImagem() {
+        return caminhoImagem;
+    }
+
+    public void setCaminhoImagem(String caminhoImagem) {
+        this.caminhoImagem = caminhoImagem;
     }
 }

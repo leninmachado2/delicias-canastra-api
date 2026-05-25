@@ -1,7 +1,7 @@
-package br.com.emporiodeliciasdacanastra.delicias_canastra_api.controller;
+package br.com.emporiocanastradf.delicias_canastra_api.controller;
 
-import br.com.emporiodeliciasdacanastra.delicias_canastra_api.model.Produto;
-import br.com.emporiodeliciasdacanastra.delicias_canastra_api.repository.ProdutoRepository;
+import br.com.emporiocanastradf.delicias_canastra_api.model.Produto;
+import br.com.emporiocanastradf.delicias_canastra_api.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

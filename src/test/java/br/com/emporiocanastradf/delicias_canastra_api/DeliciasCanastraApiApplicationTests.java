@@ -1,4 +1,4 @@
-package br.com.emporiodeliciasdacanastra.delicias_canastra_api;
+package br.com.emporiocanastradf.delicias_canastra_api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

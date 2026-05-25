@@ -1,0 +1,73 @@
+Documentação Técnica do Projeto: Empório Delícias da CanastraEsta documentação consolida todas as etapas de desenvolvimento, decisões de arquitetura, estrutura de dados e integrações implementadas até o momento no sistema do Empório Delícias da Canastra. O objetivo é servir como um guia de referência técnica para a continuidade do projeto.1. Visão Geral do SistemaO sistema é uma aplicação web desenvolvida em Java com o framework Spring Boot, projetada para operar como um catálogo digital interativo de produtos artesanais (queijos, embutidos e doces) originários de Piumhi (Serra da Canastra).Fluxo de Valor Principal:
+O cliente acessa o catálogo online.
+Adiciona produtos ao carrinho de compras dinâmico.
+Preenche os dados de identificação e escolhe o ponto de retirada física (Sede I ou Sede III do Banco do Brasil).
+Finaliza o pedido, sendo redirecionado para o WhatsApp com uma mensagem estruturada e pronta para envio.
+O administrador gerencia o catálogo e o estoque físico por meio de um Painel Administrativo integrado.
+2. Arquitetura e Tecnologias Utilizadas
+Linguagem: Java 21
+Framework Principal: Spring Boot 3.x
+Persistência de Dados: Spring Data JPA
+Banco de Dados: H2 Database (Banco em memória para desenvolvimento rápido)
+Motor de Template (View): Thymeleaf (Renderização HTML dinâmica no servidor)
+Estilização Visual: Bootstrap 5 (Interface responsiva e moderna)
+Gerenciamento de Dependências: Maven
+3. Estrutura de Dados (Model)A entidade principal do sistema é o Produto, mapeada para persistência relacional.Classe Produto.javaMapeia a tabela de produtos no banco de dados H2, contendo os atributos necessários para a exibição no catálogo e controle de inventário.
+id (Long): Chave primária autoincrementada (@Id, @GeneratedValue).
+nome (String): Nome comercial do produto (ex: "KIT PROVOLETO").
+categoria (String): Categoria do item (Queijos, Embutidos, Doces, Embalagens).
+preco (Double): Preço de venda final ao consumidor.
+descricao (String): Detalhes sobre maturação, peso ou origem.
+quantidadeEstoque (Integer): Quantidade física disponível para venda imediata.
+4. Camada de Persistência (Repository)Interface ProdutoRepository.javaEstende JpaRepository<Produto, Long>, fornecendo todos os métodos necessários para operações de CRUD (Create, Read, Update, Delete) no banco de dados sem a necessidade de escrever consultas SQL manualmente.5. Camada de Controle (Controllers)O sistema divide suas rotas em três controladores especializados:5.1. DataLoaderController.java (API de Carga)
+Rota: /api/produtos/popular (GET)
+Função: Popula o banco de dados H2 em memória com os dados reais extraídos da planilha de precificação (workbook_v1.xlsx). Insere registros iniciais como o Kit Provoleto, Minas Padrão, Parmesão Cunha e Salaminho Italiano, definindo preços e estoques iniciais padrão.
+5.2. CatalogoController.java (Catálogo Público)
+Rota: / (GET)
+Função: Recupera todos os produtos ativos do banco de dados e os injeta no template index.html para visualização do cliente final.
+5.3. AdminProdutoController.java (Painel Administrativo)
+Mapeamento Base: /admin/produtos
+Rotas Internas:
+
+GET /admin/produtos: Lista todos os produtos cadastrados e prepara um objeto vazio para o formulário de cadastro.
+GET /admin/produtos/editar/{id}: Busca um produto específico pelo ID e o carrega de volta no formulário para edição.
+POST /admin/produtos/salvar: Salva um novo produto ou atualiza um existente (caso o ID já esteja presente no objeto).
+GET /admin/produtos/excluir/{id}: Remove o produto do banco de dados.
+
+
+6. Interfaces Visuais (Views)6.1. Catálogo do Cliente (index.html)Uma interface unificada dividida em duas colunas principais:
+Coluna da Esquerda (Catálogo): Exibe os produtos em formato de cartões (cards) responsivos. Cada card possui um botão "Adicionar ao Carrinho" que dispara uma função JavaScript passando os atributos do produto (data-id, data-nome, data-preco).
+Coluna da Direita (Carrinho de Compras):
+
+Gerencia os itens adicionados em memória (JavaScript).
+Permite incrementar, decrementar ou remover itens com atualização de subtotal e total em tempo real.
+Contém o formulário de finalização (Nome, Telefone e Ponto de Retirada entre BB Sede I e BB Sede III).
+
+
+Mecanismo "Lembre-se de Mim" (Estratégia 1)Implementado via JavaScript utilizando o localStorage do navegador.
+Ao finalizar um pedido, o Nome, Telefone e Ponto de Retirada são salvos localmente.
+Ao recarregar a página, o sistema preenche automaticamente o formulário e exibe um banner personalizado no topo: "Bem-vindo(a) de volta, [Nome]! Seus dados foram carregados."
+Integração com WhatsAppO botão de finalização compila os dados do cliente e a lista de itens do carrinho em uma mensagem de texto formatada com marcações em negrito (*) e quebras de linha (%0A), abrindo o link da API do WhatsApp (https://wa.me/) em uma nova aba.6.2. Painel Administrativo (admin/produtos.html)Uma interface de gerenciamento dividida em:
+Formulário de Cadastro/Edição (Esquerda): Possui campos para Nome, Categoria, Preço, Descrição e Quantidade em Estoque. Inclui um campo oculto (id) que determina se a operação é uma inserção ou atualização.
+Tabela de Controle (Direita): Lista todos os produtos cadastrados no banco de dados, exibindo o ID, Nome, Categoria, Preço e a quantidade atual em estoque, além dos botões de ação rápida para Editar e Excluir.
+7. Configurações do Servidor (application.properties)
+Porta de Execução: Configurada explicitamente para server.port=8081 para evitar conflitos com a porta padrão 8080 do sistema operacional ou de outras aplicações locais.
+Próximos Passos (Planejamento para a Próxima Sessão)Para a evolução contínua do sistema, os seguintes módulos estão planejados para desenvolvimento:
+Módulo de Pedidos no Banco de Dados:
+
+Criar a entidade Pedido e persistir as escolhas do cliente no banco de dados antes do redirecionamento para o WhatsApp, permitindo o controle histórico de vendas.
+
+
+Painel de Controle de Pedidos (Logística):
+
+Criar uma tela administrativa para listar os pedidos recebidos, com filtros por ponto de retirada (Sede I ou Sede III) e alteração de status (Pendente, Pago, Entregue).
+
+
+Módulo Financeiro e Precificação:
+
+Integrar a lógica de custos da planilha para calcular automaticamente a margem de lucro real e sugerir preços de venda com base no custo de aquisição dos fornecedores de Piumhi.
+
+
+Segurança (Spring Security):
+
+Implementar uma tela de login para proteger a rota /admin/*, garantindo que apenas usuários autorizados acessem o painel de controle.

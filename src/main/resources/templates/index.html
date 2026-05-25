@@ -4,30 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Empório Delícias da Canastra - Catálogo</title>
+    <meta name="description" content="Produtos artesanais e delícias da Canastra. Faça seu pedido via WhatsApp.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .welcome-msg { background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-        .cart-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
-        .cart-item .qty-control { display: flex; align-items: center; gap: 5px; }
-        .cart-total { font-weight: bold; margin-top: 10px; }
-    </style>
+    <link href="/css/site.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container mt-4">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">Empório Delícias da Canastra</a>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
         <!-- Welcome message placeholder -->
-        <div id="welcomeMessage" class="welcome-msg" style="display: none;"></div>
+        <div id="welcomeMessage" class="alert alert-warning" style="display: none;" role="status"></div>
 
         <div class="row">
             <!-- Main content: product cards -->
             <div class="col-md-8">
                 <h1 class="mb-4">Catálogo de Produtos</h1>
+
+                <div th:if="${#lists.isEmpty(produtos)}" class="alert alert-info">Nenhum produto disponível no momento.</div>
+
                 <div class="row" th:each="produto : ${produtos}">
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100">
-                            <div class="card-body">
+                    <div class="col-sm-6 col-lg-4 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="product-image-wrapper">
+                                <img th:if="${produto.caminhoImagem != null and !#strings.isEmpty(produto.caminhoImagem)}" th:src="@{'/img/' + ${produto.caminhoImagem}}" th:alt="${produto.nome}"
+                                     class="card-img-top product-image" loading="lazy">
+                                <div th:if="${produto.caminhoImagem == null or #strings.isEmpty(produto.caminhoImagem)}" class="product-placeholder">
+                                    <span>Sem imagem disponível</span>
+                                </div>
+                            </div>
+                            <div class="card-body d-flex flex-column">
                                 <h5 class="card-title" th:text="${produto.nome}">Nome do Produto</h5>
-                                <p class="card-text" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 2)}">Preço</p>
-                                <button class="btn btn-primary" th:data-id="${produto.id}" th:data-nome="${produto.nome}" th:data-preco="${produto.preco}" onclick="adicionarAoCarrinho(this)">Adicionar ao Carrinho</button>
+                                <p class="card-text text-muted" th:text="${produto.descricao}" style="font-size: 0.9rem;">Descrição</p>
+                                <p class="card-text fw-bold mt-auto" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 2)}">Preço</p>
+                                <button class="btn btn-primary mt-2 w-100" th:attr="data-id=${produto.id},data-nome=${produto.nome},data-preco=${produto.preco}" aria-label="Adicionar ao carrinho" onclick="adicionarAoCarrinho(this)">Adicionar ao Carrinho</button>
                             </div>
                         </div>
                     </div>
@@ -35,14 +48,14 @@
             </div>
 
             <!-- Sidebar: shopping cart -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Carrinho de Compras</h5>
+            <aside class="col-md-4">
+                <div class="card sticky-top mobile-sticky" style="top:1rem;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Carrinho</h5>
+                        <button class="btn btn-sm btn-outline-danger" type="button" onclick="limparCarrinho()" aria-label="Limpar carrinho">Limpar</button>
                     </div>
                     <div class="card-body" id="cartContent">
-                        <!-- Cart items will be rendered here -->
-                        <div id="cartItems"></div>
+                        <div id="cartItems" aria-live="polite"></div>
                         <div class="cart-total">Total: <span id="cartTotal">R$ 0,00</span></div>
                         <hr>
                         <form id="orderForm">
@@ -52,7 +65,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="telefone" class="form-label">Telefone</label>
-                                <input type="text" class="form-control" id="telefone" required>
+                                <input type="tel" inputmode="tel" pattern="[0-9()+\-\s]{8,}" class="form-control" id="telefone" placeholder="(xx) xxxxx-xxxx" required>
                             </div>
                             <div class="mb-3">
                                 <label for="pontoRetirada" class="form-label">Ponto de Retirada</label>
@@ -61,11 +74,16 @@
                                     <option value="BB Sede III">BB Sede III</option>
                                 </select>
                             </div>
-                            <button type="button" class="btn btn-success w-100" onclick="finalizarPedido()">Finalizar Pedido via WhatsApp</button>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="lembrarDados">
+                                <label class="form-check-label" for="lembrarDados">Lembrar meus dados</label>
+                            </div>
+                            <button type="button" class="btn btn-success w-100" onclick="finalizarPedido()">Finalizar Pedido</button>
                         </form>
+                        <div id="orderFeedback" class="alert alert-info visually-hidden mt-3" role="status"></div>
                     </div>
                 </div>
-            </div>
+            </aside>
         </div>
     </div>
 
@@ -74,22 +92,30 @@
         // Carrinho em memória
         let carrinho = [];
 
-        // Estratégia 1: Lembre-se de Mim
+        // Lembrar dados controlado pelo checkbox
         function carregarDadosLembrados() {
             const nome = localStorage.getItem('nome');
             const telefone = localStorage.getItem('telefone');
             const pontoRetirada = localStorage.getItem('pontoRetirada');
-            if (nome && telefone && pontoRetirada) {
-                document.getElementById('nome').value = nome;
-                document.getElementById('telefone').value = telefone;
-                document.getElementById('pontoRetirada').value = pontoRetirada;
+            if (nome || telefone || pontoRetirada) {
+                if (nome) document.getElementById('nome').value = nome;
+                if (telefone) document.getElementById('telefone').value = telefone;
+                if (pontoRetirada) document.getElementById('pontoRetirada').value = pontoRetirada;
+                document.getElementById('lembrarDados').checked = true;
                 const welcomeDiv = document.getElementById('welcomeMessage');
-                welcomeDiv.innerHTML = `Bem-vindo(a) de volta, ${nome}! Seus dados foram carregados.`;
+                welcomeDiv.innerText = `Bem-vindo(a) de volta, ${nome || ''}`;
                 welcomeDiv.style.display = 'block';
             }
         }
 
         function salvarDadosLembrados() {
+            const lembrar = document.getElementById('lembrarDados').checked;
+            if (!lembrar) {
+                localStorage.removeItem('nome');
+                localStorage.removeItem('telefone');
+                localStorage.removeItem('pontoRetirada');
+                return;
+            }
             const nome = document.getElementById('nome').value;
             const telefone = document.getElementById('telefone').value;
             const pontoRetirada = document.getElementById('pontoRetirada').value;
@@ -116,20 +142,25 @@
         function renderizarCarrinho() {
             const cartItemsDiv = document.getElementById('cartItems');
             cartItemsDiv.innerHTML = '';
+            if (carrinho.length === 0) {
+                cartItemsDiv.innerHTML = '<div class="text-muted">Seu carrinho está vazio.</div>';
+                document.getElementById('cartTotal').innerText = 'R$ 0,00';
+                return;
+            }
             let total = 0;
             carrinho.forEach((item, index) => {
                 total += item.preco * item.quantidade;
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'cart-item';
+                itemDiv.className = 'cart-item mb-2';
                 itemDiv.innerHTML = `
                     <div><strong>${item.nome}</strong></div>
-                    <div class="qty-control">
-                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, -1)">-</button>
-                        <span>${item.quantidade}</span>
-                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, 1)">+</button>
-                        <button class="btn btn-sm btn-danger ms-2" onclick="removerItem(${index})">Remover</button>
+                    <div class="d-flex align-items-center mt-1">
+                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, -1)" aria-label="Diminuir quantidade">-</button>
+                        <span class="mx-2">${item.quantidade}</span>
+                        <button class="btn btn-sm btn-secondary" onclick="alterarQuantidade(${index}, 1)" aria-label="Aumentar quantidade">+</button>
+                        <button class="btn btn-sm btn-danger ms-2" onclick="removerItem(${index})" aria-label="Remover item">Remover</button>
+                        <div class="ms-auto">R$ ${(item.preco * item.quantidade).toFixed(2)}</div>
                     </div>
-                    <div>R$ ${(item.preco * item.quantidade).toFixed(2)}</div>
                 `;
                 cartItemsDiv.appendChild(itemDiv);
             });
@@ -152,34 +183,66 @@
             renderizarCarrinho();
         }
 
+        function limparCarrinho() {
+            if (!confirm('Deseja limpar o carrinho?')) return;
+            carrinho = [];
+            renderizarCarrinho();
+        }
+
         // Finalizar pedido via WhatsApp
-        function finalizarPedido() {
-            const nome = document.getElementById('nome').value;
-            const telefone = document.getElementById('telefone').value;
+        async function finalizarPedido() {
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
             const ponto = document.getElementById('pontoRetirada').value;
+            const feedback = document.getElementById('orderFeedback');
+            feedback.classList.add('visually-hidden');
+
             if (!nome || !telefone || carrinho.length === 0) {
                 alert('Preencha todos os campos e adicione itens ao carrinho.');
                 return;
             }
-            // Salvar dados lembrados
             salvarDadosLembrados();
 
-            let mensagem = `Olá! Gostaria de fazer um pedido no Empório Delícias da Canastra.%0A%0A`;
-            mensagem += `*Dados do Cliente*%0ANome: ${nome}%0ATelefone: ${telefone}%0APonto de Retirada: ${ponto}%0A%0A`;
-            mensagem += `*Itens do Pedido*%0A`;
-            carrinho.forEach(item => {
-                mensagem += `${item.nome} - Qtd: ${item.quantidade} - Subtotal: R$ ${(item.preco * item.quantidade).toFixed(2)}%0A`;
-            });
-            const total = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
-            mensagem += `%0A*Total: R$ ${total.toFixed(2)}*%0A%0A`;
-            mensagem += `Agradeço a atenção e aguardo a confirmação do pedido.`;
+            const payload = {
+                nome,
+                telefone,
+                pontoRetirada: ponto,
+                itens: carrinho.map(item => ({ produtoId: item.id, quantidade: item.quantidade }))
+            };
 
-            const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
-            window.open(url, '_blank');
+            try {
+                const response = await fetch('/api/pedidos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Erro ao criar pedido');
+                }
+
+                const result = await response.json();
+                feedback.textContent = `Pedido ${result.pedidoId} criado. Total: R$ ${result.valorTotal.toFixed(2)}.`;
+                feedback.classList.remove('visually-hidden');
+                feedback.classList.remove('alert-danger');
+                feedback.classList.add('alert-info');
+
+                if (result.paymentUrl) {
+                    window.open(result.paymentUrl, '_blank');
+                }
+            } catch (error) {
+                feedback.textContent = 'Erro ao criar pedido: ' + (error.message || 'Tente novamente.');
+                feedback.classList.remove('visually-hidden');
+                feedback.classList.remove('alert-info');
+                feedback.classList.add('alert-danger');
+            }
         }
 
         // Carregar dados ao iniciar
-        window.onload = carregarDadosLembrados;
+        window.onload = function() { carregarDadosLembrados(); renderizarCarrinho(); };
     </script>
 </body>
 </html>
